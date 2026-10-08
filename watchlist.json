@@ -1,0 +1,10 @@
+{
+  "_comment": "Thresholds are how far below the all-time high triggers an alert (0.10 = 10%). Each alert fires once per slide and re-arms when the price sets a new high.",
+  "stocks": [
+    {"ticker": "MSFT", "name": "Microsoft", "thresholds": [0.10, 0.20, 0.30]},
+    {"ticker": "AAPL", "name": "Apple", "thresholds": [0.10, 0.20, 0.30]},
+    {"ticker": "NVDA", "name": "Nvidia", "thresholds": [0.10, 0.20, 0.30]},
+    {"ticker": "AMZN", "name": "Amazon", "thresholds": [0.10, 0.20, 0.30]},
+    {"ticker": "VUAG.L", "name": "Vanguard S&P 500 (Acc)", "thresholds": [0.05, 0.10, 0.20]}
+  ]
+}

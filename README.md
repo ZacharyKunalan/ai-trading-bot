@@ -1,5 +1,7 @@
 # AI Trading Bot
 
+![Tests](https://github.com/OWNER/ai-trading-bot/actions/workflows/tests.yml/badge.svg)
+
 An AI-assisted investing agent, built in stages. **Stage 1 is a backtester** that tests one question before any money or automation is involved:
 
 > If I put £150 a month into the S&P 500, does waiting for dips (or selling at all-time highs and buying back lower) beat just investing every month?
@@ -83,6 +85,39 @@ Median ending value vs plain monthly investing. Full table with win rates: [`res
 - **Sometimes the dip is the start of a decline.** Boeing was down a median 21% a year after its 20% dips and is still below its old high. Cisco and Intel each took 17–21 years to get back to their 2000 highs. Microsoft took 14.
 - **VUAG only exists since 2019** (2 dips), so treat its numbers as thin evidence. Its long-run behaviour is the S&P 500's, which is what Stage 1 tests.
 
+## Stage 3: daily email alerts
+
+`run_monitor.py` checks the watchlist in [`watchlist.json`](watchlist.json) every weekday after the US market closes, using GitHub Actions. When a holding falls past one of its thresholds, it sends an email that puts the dip in context using the Stage 2 history:
+
+> **Microsoft (MSFT) is 20.0% below its high**
+> Since 1993, Microsoft has fallen 20% from its high 9 other times. A year later it was higher 88% of the time (median +45% vs +19% from a random day), but 25% of the time it fell at least another 10% first.
+
+- **Stateless.** An alert fires on the day a new dip episode starts (same definition as Stage 2), so the same slide never alerts twice and nothing is stored between runs. It re-arms once the price sets a new high.
+- **Alerts, not trades.** It never buys anything. Stage 2 showed a price drop alone is a weak signal, so the email is a prompt to look into it.
+- **No secrets in the repo.** Gmail credentials live in GitHub Actions secrets (or a local `.env` file that git ignores).
+
+### Setup
+
+1. **Create a Gmail app password.** Turn on 2-Step Verification for your Google account, then create an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). It's a 16-character code used instead of your real password.
+2. **Add repository secrets** in GitHub under *Settings → Secrets and variables → Actions*:
+   - `GMAIL_ADDRESS`: the Gmail account that sends alerts
+   - `GMAIL_APP_PASSWORD`: the app password from step 1
+   - `ALERT_TO` (optional): where alerts go, if different
+3. **Test it.** Go to *Actions → Daily dip alerts → Run workflow* and choose `simulate`. You should get a `[SIMULATED]` alert email within a minute or two.
+
+After that it runs on its own at 22:37 UTC, Monday to Friday. GitHub pauses scheduled workflows in repos with no activity for 60 days, so push a commit now and then (or re-enable it from the Actions tab).
+
+To edit what's watched, change `watchlist.json`. Each ticker has its own thresholds (VUAG uses 5/10/20% because an index moves less than a single stock).
+
+### Run it locally
+
+```bash
+cp .env.example .env                              # then fill in your Gmail details
+python run_monitor.py --dry-run                   # check prices, save results/alert_preview.html
+python run_monitor.py --dry-run --simulate MSFT:0.20   # preview what an alert looks like
+python run_monitor.py --always                    # send a real status email to test your setup
+```
+
 ## How it works
 
 ```
@@ -94,8 +129,14 @@ src/backtest/
 ├── metrics.py     # money-weighted return (XIRR) and summary stats
 ├── dips.py        # finds every X% fall from the high and what happened next
 └── charts.py      # the charts above
+src/alerts/
+├── monitor.py     # detects new threshold crossings in the latest prices
+└── emailer.py     # builds the HTML email and sends it through Gmail
 run_backtest.py    # Stage 1: one ticker, strategy comparison
 run_stocks.py      # Stage 2: watchlist + control group, strategies and dip episodes
+run_monitor.py     # Stage 3: daily check and email alert
+watchlist.json     # tickers and alert thresholds
+.github/workflows/ # daily-alerts.yml (scheduled check) and tests.yml (CI)
 tests/             # pytest unit tests for the engine and metrics
 ```
 
@@ -121,7 +162,7 @@ Results are written to `results/` and `results/stocks/` (CSV tables, a markdown 
 
 - [x] **Stage 1: Backtester.** Does dip-buying beat monthly investing?
 - [x] **Stage 2: Individual stocks.** Same test on a watchlist and a control group, plus what happens after every 10/20/30% fall from the high.
-- [ ] **Stage 3: Monitor and alert.** A scheduled watcher that checks a watchlist against dip thresholds and sends a notification (no automatic real-money trades).
+- [x] **Stage 3: Monitor and alert.** Daily GitHub Actions job that emails when a holding crosses a dip threshold, with historical context.
 - [ ] **Stage 4: AI layer.** When a threshold trips, Claude reads recent news and explains *why* the stock dropped, to help separate a temporary dip from a company in trouble.
 - [ ] **Stage 5: Paper trading.** Execute the strategy on an Alpaca paper account through the Alpaca MCP server, with hard risk limits in code and every decision logged.
 

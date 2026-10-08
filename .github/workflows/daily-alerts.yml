@@ -1,0 +1,36 @@
+name: Daily dip alerts
+
+on:
+  schedule:
+    # 22:37 UTC, Monday to Friday: after the US market closes (05:37 in Jakarta).
+    - cron: "37 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "normal = email only on alerts, always = send a status email, simulate = send a fake MSFT 20% alert"
+        type: choice
+        options: [normal, always, simulate]
+        default: normal
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Check watchlist and email alerts
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          MODE: ${{ github.event.inputs.mode || 'normal' }}
+        run: |
+          case "$MODE" in
+            always)   python run_monitor.py --always ;;
+            simulate) python run_monitor.py --always --simulate MSFT:0.20 ;;
+            *)        python run_monitor.py ;;
+          esac
