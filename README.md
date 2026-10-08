@@ -1,6 +1,6 @@
 # AI Trading Bot
 
-![Tests](https://github.com/OWNER/ai-trading-bot/actions/workflows/tests.yml/badge.svg)
+![Tests](https://github.com/ZacharyKunalan/ai-trading-bot/actions/workflows/tests.yml/badge.svg)
 
 An AI-assisted investing agent, built in stages. **Stage 1 is a backtester** that tests one question before any money or automation is involved:
 
