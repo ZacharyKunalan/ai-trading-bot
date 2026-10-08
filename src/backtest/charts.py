@@ -84,3 +84,69 @@ def plot_results(results, rolling: pd.DataFrame, ticker: str, window: int, out: 
     fig.savefig(out, dpi=160, facecolor=SURFACE)
     plt.close(fig)
     return out
+
+
+def plot_stocks(strat: pd.DataFrame, dip: pd.DataFrame, groups: dict, window: int, out: Path,
+                focus=("Buy only on 10% dips", "Sell at highs, rebuy on 5% dips",
+                       "Invest 67% monthly, rest on 10% dips")) -> Path:
+    """Left: strategy vs plain monthly investing per ticker.
+    Right: 12-month return after a 20% dip vs from any day."""
+    tickers = list(groups)
+    labels = [f"{t}  (control)" if groups[t] == "control" else t for t in tickers]
+    y = {t: len(tickers) - 1 - i for i, t in enumerate(tickers)}
+    n_watch = sum(g == "watchlist" for g in groups.values())
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 7), sharey=True)
+    fig.patch.set_facecolor(SURFACE)
+
+    # Left panel.
+    _style(ax1)
+    offsets = (-0.18, 0, 0.18)
+    for (name, color, off) in zip(focus, SERIES, offsets):
+        rows = strat[strat.strategy == name].set_index("ticker")
+        xs = [rows.loc[t, "median_vs_baseline"] * 100 for t in tickers]
+        ys = [y[t] + off for t in tickers]
+        ax1.scatter(xs, ys, s=64, color=color, edgecolor=SURFACE, linewidth=2, zorder=3, label=name)
+    ax1.axvline(0, color=TEXT_2, lw=1)
+    ax1.xaxis.set_major_formatter(lambda v, _: f"{v:+.0f}%")
+    ax1.set_yticks([y[t] for t in tickers], labels, fontsize=10, color=TEXT)
+    ax1.grid(axis="y", visible=False)
+    ax1.legend(frameon=False, fontsize=9, labelcolor=TEXT_2, loc="upper left", bbox_to_anchor=(0, -0.07), ncol=1)
+    ax1.set_title(f"Ending value vs plain monthly investing\nmedian of rolling {window}-year windows",
+                  loc="left", fontsize=12, color=TEXT, fontweight="bold")
+    ax1.annotate("← worse than investing monthly", (0, 1.0), xycoords=("data", "axes fraction"),
+                 xytext=(-6, -2), textcoords="offset points", ha="right", va="top", fontsize=8.5, color=TEXT_2)
+
+    # Right panel: dumbbell.
+    _style(ax2)
+    d = dip[dip.dip == 0.20].set_index("ticker")
+    for t in tickers:
+        a, b = d.loc[t, "baseline_median_12m"] * 100, d.loc[t, "median_12m_after"] * 100
+        ax2.plot([a, b], [y[t], y[t]], color=GRID, lw=3, zorder=1, solid_capstyle="round")
+    ax2.scatter([d.loc[t, "baseline_median_12m"] * 100 for t in tickers], [y[t] for t in tickers],
+                s=64, color=NEUTRAL, edgecolor=SURFACE, linewidth=2, zorder=3, label="Bought on any day")
+    ax2.scatter([d.loc[t, "median_12m_after"] * 100 for t in tickers], [y[t] for t in tickers],
+                s=64, color=SERIES[0], edgecolor=SURFACE, linewidth=2, zorder=3,
+                label="Bought right after a 20% fall from the high")
+    for t in tickers:
+        n = int(d.loc[t, "episodes"])
+        ax2.annotate(f"{n} dips", (max(d.loc[t, "baseline_median_12m"], d.loc[t, "median_12m_after"]) * 100, y[t]),
+                     xytext=(10, 0), textcoords="offset points", va="center", fontsize=8.5, color=TEXT_2)
+    ax2.axvline(0, color=TEXT_2, lw=1)
+    ax2.xaxis.set_major_formatter(lambda v, _: f"{v:+.0f}%")
+    ax2.grid(axis="y", visible=False)
+    ax2.legend(frameon=False, fontsize=9, labelcolor=TEXT_2, loc="upper left", bbox_to_anchor=(0, -0.07), ncol=1)
+    ax2.set_title("Median return over the next 12 months", loc="left", fontsize=12,
+                  color=TEXT, fontweight="bold")
+    lo, hi = ax2.get_xlim()
+    ax2.set_xlim(lo, hi + (hi - lo) * 0.15)
+
+    # Separator between watchlist and control group.
+    sep = len(tickers) - n_watch - 0.5
+    for ax in (ax1, ax2):
+        ax.axhline(sep, color=NEUTRAL, lw=1, ls=":")
+
+    fig.tight_layout()
+    fig.savefig(out, dpi=160, facecolor=SURFACE)
+    plt.close(fig)
+    return out

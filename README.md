@@ -36,6 +36,53 @@ An AI-assisted investing agent, built in stages. **Stage 1 is a backtester** tha
 - **Waiting for dips without selling** costs much less, but still doesn't reliably beat investing straight away. The deeper the dip you wait for, the more you lose.
 - Idle cash was given the T-bill rate here, which is generous to the dip strategies. With `--no-cash-interest` they do worse.
 
+## Stage 2: individual stocks
+
+Same question on single stocks: **MSFT, AAPL, NVDA, AMZN** and **VUAG** (Vanguard S&P 500, accumulating, in GBP on the London Stock Exchange). Plus a **control group** of former market leaders: **CSCO, INTC, BA, PYPL**.
+
+The control group matters. The watchlist is made of companies we *already know* became some of the biggest winners in history. Testing "buy the dip" only on them is survivorship bias, so the control group checks what happens when the company you're buying doesn't turn out to be a winner.
+
+![Stage 2 results](results/stocks/stocks.png)
+
+### Strategies (rolling 5-year windows)
+
+| Ticker | Buy only on 10% dips | Sell at highs, rebuy on 5% dips | Invest 67% monthly, rest on 10% dips |
+|:--|--:|--:|--:|
+| MSFT | +0.0% | −2.6% | −0.0% |
+| AAPL | −0.6% | **−14.3%** | −0.2% |
+| NVDA | −0.3% | −1.8% | −0.1% |
+| AMZN | +0.0% | −2.5% | +0.0% |
+| VUAG | −4.1% | **−11.2%** | −1.4% |
+| *CSCO* | +0.0% | +0.0% | −0.0% |
+| *INTC* | +0.0% | +0.0% | +0.0% |
+| *BA* | −1.4% | +0.4% | −0.5% |
+| *PYPL* | −0.6% | −4.5% | −0.2% |
+
+Median ending value vs plain monthly investing. Full table with win rates: [`results/stocks/report.md`](results/stocks/report.md).
+
+### What happened after a 20% fall from the high
+
+| Ticker | Times | Up 12m later | Median 12m after the dip | Median 12m from any day | Fell another 10%+ within 12m | Longest wait to regain old high |
+|:--|--:|--:|--:|--:|--:|--:|
+| MSFT | 9 | 88% | +45% | +19% | 25% | 14.4 yrs |
+| AAPL | 14 | 64% | +23% | +31% | 71% | 6.4 yrs |
+| NVDA | 16 | 67% | +34% | +41% | 73% | 8.4 yrs |
+| AMZN | 18 | 76% | +34% | +26% | 65% | 9.8 yrs |
+| VUAG | 2 | 100% | +17% | +14% | 50% | 1.6 yrs |
+| *CSCO* | 7 | 71% | +16% | +16% | 71% | 21.4 yrs |
+| *INTC* | 15 | 77% | +15% | +11% | 46% | 17.5 yrs |
+| *BA* | 6 | 33% | **−21%** | +16% | 83% | 7.4 yrs, still waiting |
+| *PYPL* | 5 | 60% | +27% | +14% | 80% | 5.0 yrs, still waiting |
+
+**What this says:**
+
+- **Selling at highs is still the costly part**, especially on steady compounders like Apple (−14%) and the S&P 500 fund (−11%).
+- **Buying only on dips barely changes anything on single stocks.** Volatile stocks spend most of their time 10%+ below their high, so the dip rule ends up buying almost every month anyway.
+- **A 20% fall is not a reliable buy signal.** For Apple and Nvidia, buying right after a 20% fall did *worse* over the next year than buying on a random day. For Microsoft and Amazon it did better. There's no consistent pattern.
+- **Most dips kept falling first.** In 65–83% of cases (outside Microsoft), the stock dropped at least another 10% within the year. An alert at −20% often fires too early.
+- **Sometimes the dip is the start of a decline.** Boeing was down a median 21% a year after its 20% dips and is still below its old high. Cisco and Intel each took 17–21 years to get back to their 2000 highs. Microsoft took 14.
+- **VUAG only exists since 2019** (2 dips), so treat its numbers as thin evidence. Its long-run behaviour is the S&P 500's, which is what Stage 1 tests.
+
 ## How it works
 
 ```
@@ -43,9 +90,12 @@ src/backtest/
 ├── data.py        # downloads daily prices (Yahoo Finance) and caches them in data/
 ├── engine.py      # day-by-day simulation: deposits, buys, sells, cash interest
 ├── strategies.py  # the strategies compared above
+├── compare.py     # single-period and rolling-window comparisons
 ├── metrics.py     # money-weighted return (XIRR) and summary stats
-└── charts.py      # the chart above
-run_backtest.py    # CLI entry point
+├── dips.py        # finds every X% fall from the high and what happened next
+└── charts.py      # the charts above
+run_backtest.py    # Stage 1: one ticker, strategy comparison
+run_stocks.py      # Stage 2: watchlist + control group, strategies and dip episodes
 tests/             # pytest unit tests for the engine and metrics
 ```
 
@@ -60,15 +110,17 @@ pip install -r requirements.txt
 python run_backtest.py                       # SPY, 20 years + rolling 10-year windows
 python run_backtest.py --ticker AAPL         # any Yahoo Finance ticker
 python run_backtest.py --monthly 200 --years 15 --window 5 --no-cash-interest
+python run_stocks.py                         # Stage 2 watchlist + control group
+python run_stocks.py --watchlist MSFT GOOGL --control INTC --window 5
 pytest
 ```
 
-Results are written to `results/` (CSV tables and the chart).
+Results are written to `results/` and `results/stocks/` (CSV tables, a markdown report and charts). Run `--refresh` to re-download prices.
 
 ## Roadmap
 
 - [x] **Stage 1: Backtester.** Does dip-buying beat monthly investing?
-- [ ] **Stage 2: Individual stocks.** Run the same test on S&P 500 constituents, and measure how often a stock that drops past a threshold keeps falling.
+- [x] **Stage 2: Individual stocks.** Same test on a watchlist and a control group, plus what happens after every 10/20/30% fall from the high.
 - [ ] **Stage 3: Monitor and alert.** A scheduled watcher that checks a watchlist against dip thresholds and sends a notification (no automatic real-money trades).
 - [ ] **Stage 4: AI layer.** When a threshold trips, Claude reads recent news and explains *why* the stock dropped, to help separate a temporary dip from a company in trouble.
 - [ ] **Stage 5: Paper trading.** Execute the strategy on an Alpaca paper account through the Alpaca MCP server, with hard risk limits in code and every decision logged.
