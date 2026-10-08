@@ -1,0 +1,24 @@
+
+SPY, £150/month, 2006-10-09 00:00:00 to 2026-10-07 00:00:00
+
+| strategy                             | contributed   | final_value   | profit   | annual_return   | avg_in_cash   |   trades |
+|:-------------------------------------|:--------------|:--------------|:---------|:----------------|:--------------|---------:|
+| Monthly investing (baseline)         | £36,150       | £173,684      | £137,534 | 13.9%           | 0%            |      241 |
+| Invest 67% monthly, rest on 10% dips | £36,150       | £171,660      | £135,510 | 13.8%           | 3%            |      319 |
+| Buy only on 5% dips                  | £36,150       | £173,062      | £136,912 | 13.8%           | 3%            |      127 |
+| Buy only on 10% dips                 | £36,150       | £167,611      | £131,461 | 13.6%           | 10%           |       78 |
+| Sell at highs, rebuy on 5% dips      | £36,150       | £109,434      | £73,284  | 10.0%           | 47%           |      149 |
+| Sell at highs, rebuy on 10% dips     | £36,150       | £75,545       | £39,395  | 6.9%            | 57%           |       85 |
+
+Rolling 10-year windows (95 start dates, every 3 months):
+
+| strategy                             | beat_baseline   | median_vs_baseline   | worst_vs_baseline   | best_vs_baseline   |
+|:-------------------------------------|:----------------|:---------------------|:--------------------|:-------------------|
+| Monthly investing (baseline)         | 0%              | +0.0%                | +0.0%               | +0.0%              |
+| Invest 67% monthly, rest on 10% dips | 31%             | -1.0%                | -4.7%               | +0.6%              |
+| Buy only on 5% dips                  | 45%             | -0.2%                | -2.8%               | +0.5%              |
+| Buy only on 10% dips                 | 31%             | -3.0%                | -14.0%              | +1.8%              |
+| Sell at highs, rebuy on 5% dips      | 42%             | -9.8%                | -28.1%              | +12.9%             |
+| Sell at highs, rebuy on 10% dips     | 26%             | -23.3%               | -38.8%              | +5.2%              |
+
+Chart saved to /home/claude/ai-trading-bot/results/backtest.png

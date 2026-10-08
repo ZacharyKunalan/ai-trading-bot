@@ -1,0 +1,16 @@
+# Secrets (Alpaca keys etc. in later stages)
+.env
+
+# Cached market data
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
